@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英语作文批改 - AI助手</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(180deg, #e8f0f8 0%, #d0dce8 100%);
+    min-height: 100vh; color: #1a2a3a;
+  }
+  .container { max-width: 750px; margin: 0 auto; padding: 16px; }
+
+  .header {
+    text-align: center; padding: 20px 0 10px;
+    border-bottom: 2px solid #3b5998; margin-bottom: 16px;
+  }
+  .header h1 { font-size: 1.5em; color: #1a2a3a; letter-spacing: 2px; }
+  .header .subtitle { color: #5a7a9a; font-size: 0.8em; letter-spacing: 1px; margin-top: 2px; }
+
+  .topic-box {
+    background: #fff; border-radius: 12px; padding: 12px 16px;
+    margin-bottom: 14px; border: 1px solid #c8d8e8;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .topic-label { color: #5a7a9a; font-size: 0.95em; white-space: nowrap; }
+  .topic-box input {
+    padding: 8px 36px 8px 12px; border-radius: 8px;
+    border: 1px solid #c8d8e8; font-size: 0.95em; outline: none;
+    font-family: inherit; color: #1a2a3a;
+  }
+  .topic-box input:focus { border-color: #3b5998; }
+  .topic-box input::placeholder { color: #a8bcc8; }
+
+  .upload-area {
+    background: #fff; border-radius: 14px; padding: 30px 16px;
+    text-align: center; border: 2px dashed #c8d8e8;
+    cursor: pointer; transition: all 0.3s; margin-bottom: 14px;
+  }
+  .upload-area:hover { border-color: #3b5998; background: #f8fafc; }
+  .upload-area .icon { font-size: 2.5em; margin-bottom: 6px; }
+  .upload-area .text { color: #5a7a9a; font-size: 0.95em; }
+  .upload-area .hint { color: #a0b8c8; font-size: 0.75em; margin-top: 4px; }
+  .upload-area input[type=file] { display: none; }
+
+  .file-list { display: none; margin-bottom: 14px; }
+  .file-list-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; color: #1a2a3a; font-size: 0.9em;
+  }
+  .file-list-header button {
+    background: rgba(200,80,60,0.1); color: #c44; border: 1px solid rgba(200,80,60,0.2);
+    border-radius: 16px; padding: 3px 12px; cursor: pointer; font-size: 0.8em;
+  }
+  .file-items {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px; max-height: 250px; overflow-y: auto;
+  }
+  .file-item {
+    background: #fff; border-radius: 10px; padding: 8px; text-align: center;
+    border: 1px solid #c8d8e8; position: relative;
+  }
+  .file-item img {
+    width: 100%; height: 80px; object-fit: cover; border-radius: 6px;
+    margin-bottom: 4px; background: #f0f4f8;
+  }
+  .file-item .fn {
+    font-size: 0.7em; color: #5a7a9a; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .badge { position: absolute; top: -4px; right: -4px; font-size: 0.7em; padding: 2px 6px; border-radius: 10px; color: #fff; font-weight: 600; }
+  .badge.ok { background: #4a9; }
+  .badge.err { background: #c44; }
+
+  .btn-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .btn {
+    flex: 1; padding: 14px 20px; border-radius: 50px;
+    cursor: pointer; font-size: 1.15em; font-weight: 600; letter-spacing: 2px;
+    border: none; transition: all 0.3s; font-family: inherit; text-align: center;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #3b5998, #1a2a5a);
+    color: #fff; box-shadow: 0 4px 15px rgba(26,42,90,0.25);
+  }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-primary:disabled { opacity: 0.4; transform: none; box-shadow: none; }
+  .btn-outline {
+    background: #fff; color: #3b5998; border: 1.5px solid #3b5998;
+  }
+  .btn-outline:hover { background: #f8fafc; }
+
+  .progress-box { display: none; margin-bottom: 14px; }
+  .progress-bar-bg {
+    background: #fff; border-radius: 10px; height: 8px; overflow: hidden; margin: 8px 0;
+  }
+  .progress-bar-fill {
+    height: 100%; background: linear-gradient(90deg, #3b5998, #1a2a5a);
+    border-radius: 10px; transition: width 0.3s; width: 0%;
+  }
+  .progress-text { font-size: 0.85em; color: #5a7a9a; text-align: center; }
+
+  .results-box { display: none; margin-top: 16px; }
+  .results-summary {
+    background: #fff; border-radius: 12px; padding: 14px 18px;
+    margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    display: flex; justify-content: space-around; text-align: center;
+  }
+  .summary-item .num { font-size: 1.6em; font-weight: 700; color: #3b5998; }
+  .summary-item .lbl { font-size: 0.75em; color: #8a9aaa; }
+
+  .result-cards { display: flex; flex-direction: column; gap: 8px; }
+  .result-card {
+    background: #fff; border-radius: 12px; padding: 14px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04); cursor: pointer;
+    border-left: 4px solid #3b5998; transition: all 0.2s;
+  }
+  .result-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.08); }
+  .rc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .rc-name { font-weight: 600; color: #1a2a3a; }
+  .rc-score { background: #f0f4f8; padding: 3px 10px; border-radius: 12px; color: #3b5998; font-weight: 700; font-size: 0.9em; }
+  .rc-detail { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e8ecf0; }
+  .result-card.expanded .rc-detail { display: block; }
+  .rc-detail .section { margin-bottom: 10px; }
+  .rc-detail .section h4 { font-size: 0.85em; color: #1a2a3a; margin-bottom: 4px; }
+  .rc-detail .section p { font-size: 0.85em; color: #3a4a5a; line-height: 1.7; white-space: pre-line; }
+  .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px; }
+  .score-item {
+    display: flex; justify-content: space-between; padding: 4px 8px;
+    background: #f0f4f8; border-radius: 6px; font-size: 0.8em;
+  }
+  .score-item .l { color: #5a7a9a; }
+  .score-item .v { color: #1a2a3a; font-weight: 600; }
+  .rewrite-box {
+    background: #f8faf8; border: 1px solid #a0c8a0; border-radius: 8px;
+    padding: 12px; margin-top: 8px;
+  }
+  .rewrite-box h4 { color: #2a6a2a !important; }
+  .rewrite-box p { font-family: "Georgia", "Times New Roman", serif; font-size: 0.9em !important; }
+
+  .error-box {
+    background: #fff0f0; border: 1px solid #ecc; color: #a33;
+    border-radius: 10px; padding: 12px; margin-top: 12px; display: none; font-size: 0.9em;
+  }
+
+  .annotation-badge { display: inline-block; background: #fff0e0; color: #c84; padding: 1px 6px; border-radius: 8px; font-size: 0.8em; margin: 0 2px; }
+  .vocab-badge { display: inline-block; background: #e0f0ff; color: #38b; padding: 1px 6px; border-radius: 8px; font-size: 0.8em; margin: 0 2px; }
+
+  /* Topic photo input */
+  .topic-input-wrap {
+    position: relative; flex: 1; display: flex; align-items: center;
+  }
+  .topic-input-wrap input { width: 100%; }
+  .topic-photo-btn {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; padding: 4px 8px;
+    font-size: 1.2em; color: #5a7a9a; border-radius: 6px;
+    transition: all 0.2s; line-height: 1;
+  }
+  .topic-photo-btn:hover { background: #e8f0f8; color: #3b5998; }
+  .topic-photo-btn:disabled { opacity: 0.4; cursor: default; }
+  .topic-photo-btn .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid #c8d8e8;
+    border-top-color: #3b5998; border-radius: 50%; animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .topic-photo-drop {
+    position: absolute; inset: 0; background: rgba(59,89,152,0.06);
+    border: 2px dashed #3b5998; border-radius: 8px; display: none;
+    align-items: center; justify-content: center; z-index: 2;
+    color: #3b5998; font-size: 0.85em; letter-spacing: 1px;
+  }
+  .topic-photo-drop.active { display: flex; }
+  .topic-photo-status {
+    font-size: 0.75em; color: #5a7a9a; padding: 2px 8px;
+    margin-left: 4px; display: none; white-space: nowrap;
+  }
+  .topic-photo-status.show { display: inline; }
+  .topic-photo-status.success { color: #4a9; }
+  .topic-photo-status.error { color: #c44; }
+  /* end topic photo */
+
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📝 英语作文批改</h1>
+    <div class="subtitle">初中英语 · AI评分 · 逐段点评 · 优化改写</div>
+  </div>
+
+  <div class="topic-box">
+    <label class="topic-label">📝 作文题目</label>
+    <div class="topic-input-wrap">
+      <input type="text" id="topicInput" placeholder="e.g. My Favorite Sport / A Letter to My Friend..." oninput="updateBtn()">
+      <button class="topic-photo-btn" id="topicPhotoBtn" title="拍照/上传题目图片，自动识别文字"
+        onclick="document.getElementById('topicPhotoInput').click()">📸</button>
+      <input type="file" id="topicPhotoInput" accept="image/*" capture="environment" style="display:none">
+      <div class="topic-photo-drop" id="topicPhotoDrop">📸 释放图片识别题目</div>
+    </div>
+    <span class="topic-photo-status" id="topicPhotoStatus"></span>
+  </div>
+
+  <div class="upload-area" id="dropZone">
+    <div id="uploadHint">
+      <div class="icon">📷</div>
+      <div class="text">点击上传英语作文图片（可多选）</div>
+      <div class="hint">支持多张照片 · 拖拽上传 · Ctrl+V 粘贴</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" multiple>
+  </div>
+
+  <div class="file-list" id="fileList">
+    <div class="file-list-header">
+      <span>已选 <strong id="fileCount">0</strong> 篇作文</span>
+      <button onclick="clearAll()">✕ 清空</button>
+    </div>
+    <div class="file-items" id="fileItems"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" id="btnGo" onclick="startBatch()" disabled>批量批改</button>
+    <button class="btn btn-outline" id="btnExport" onclick="exportCSV()" style="display:none;">📤 导出 CSV</button>
+  </div>
+
+  <div class="progress-box" id="progressBox">
+    <div class="progress-text" id="progressText">准备中...</div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+  </div>
+
+  <div class="results-box" id="resultsBox">
+    <div class="results-summary">
+      <div class="summary-item"><div class="num" id="sumTotal">0</div><div class="lbl">批改完成</div></div>
+      <div class="summary-item"><div class="num" id="sumAvg">-</div><div class="lbl">平均分</div></div>
+      <div class="summary-item"><div class="num" id="sumMax">-</div><div class="lbl">最高分</div></div>
+      <div class="summary-item"><div class="num" id="sumMin">-</div><div class="lbl">最低分</div></div>
+    </div>
+    <div class="result-cards" id="resultCards"></div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+</div>
+
+<script>
+var files = [];
+var results = [];
+var apiKey = 'ark-e46dec7a-ea31-43d5-9ae9-9098d977309b-245ec';
+var API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+
+// ---- Topic photo input ----
+var topicPhotoInput = document.getElementById('topicPhotoInput');
+var topicPhotoBtn = document.getElementById('topicPhotoBtn');
+var topicPhotoStatus = document.getElementById('topicPhotoStatus');
+var topicPhotoDrop = document.getElementById('topicPhotoDrop');
+var topicInputWrap = document.querySelector('.topic-input-wrap');
+
+topicPhotoInput.addEventListener('change', function() {
+  if (topicPhotoInput.files.length > 0) handleTopicPhoto(topicPhotoInput.files[0]);
+});
+
+topicInputWrap.addEventListener('dragover', function(e) { e.preventDefault(); topicPhotoDrop.classList.add('active'); });
+topicInputWrap.addEventListener('dragleave', function(e) { topicPhotoDrop.classList.remove('active'); });
+topicInputWrap.addEventListener('drop', function(e) {
+  e.preventDefault();
+  topicPhotoDrop.classList.remove('active');
+  var f = e.dataTransfer.files[0];
+  if (f && f.type.match(/^image\//)) handleTopicPhoto(f);
+});
+
+async function handleTopicPhoto(file) {
+  topicPhotoBtn.disabled = true;
+  topicPhotoBtn.innerHTML = '<span class="spinner"></span>';
+  topicPhotoStatus.style.display = 'inline';
+  topicPhotoStatus.textContent = '正在识别题目…';
+  topicPhotoStatus.className = 'topic-photo-status show';
+  try {
+    var b64 = (await readB64(file)).split(',')[1];
+    var topic = await extractTopicFromImage(b64);
+    document.getElementById('topicInput').value = topic;
+    updateBtn();
+    topicPhotoStatus.textContent = '✓ 已识别';
+    topicPhotoStatus.className = 'topic-photo-status show success';
+  } catch (e) {
+    topicPhotoStatus.textContent = '✗ 识别失败';
+    topicPhotoStatus.className = 'topic-photo-status show error';
+    console.error('Topic photo OCR error:', e);
+  }
+  topicPhotoBtn.disabled = false;
+  topicPhotoBtn.innerHTML = '📸';
+  topicPhotoInput.value = '';
+  setTimeout(function() { topicPhotoStatus.className = 'topic-photo-status'; }, 3000);
+}
+
+async function extractTopicFromImage(imageB64) {
+  var prompt = 'This is a photo of an English essay topic/question. Please read the text and output ONLY the exact essay topic in plain text. Do not add any explanation, translation, or formatting. Just output the topic as-is. If you cannot read the text clearly, output "[unreadable]".';
+
+  var body = JSON.stringify({
+    model: 'doubao-1-5-vision-pro-32k-250115',
+    messages: [{ role: 'user', content: [
+      { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + imageB64 } },
+      { type: 'text', text: prompt }
+    ]}],
+    max_tokens: 200, temperature: 0.1
+  });
+
+  var resp = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: body
+  });
+
+  if (!resp.ok) throw new Error('OCR API error: ' + resp.status);
+
+  var data = await resp.json();
+  var text = data.choices[0].message.content.trim();
+  if (text === '[unreadable]') throw new Error('Cannot read topic from photo');
+  return text;
+}
+// ---- End topic photo input ----
+
+// File handling
+var dz = document.getElementById('dropZone');
+var fi = document.getElementById('fileInput');
+dz.addEventListener('click', function() { fi.click(); });
+fi.addEventListener('change', function() { addFiles(fi.files); });
+dz.addEventListener('dragover', function(e) { e.preventDefault(); });
+dz.addEventListener('drop', function(e) {
+  e.preventDefault();
+  if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
+});
+document.addEventListener('paste', function(e) {
+  var items = e.clipboardData.items;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') >= 0) {
+      files.push(items[i].getAsFile());
+      break;
+    }
+  }
+  renderFiles(); updateBtn();
+});
+
+function addFiles(fileList) {
+  for (var i = 0; i < fileList.length; i++) {
+    if (fileList[i].type.match(/^image\//)) files.push(fileList[i]);
+  }
+  renderFiles(); updateBtn();
+}
+
+function renderFiles() {
+  var cont = document.getElementById('fileItems');
+  if (files.length === 0) {
+    document.getElementById('fileList').style.display = 'none';
+    document.getElementById('uploadHint').style.display = 'block';
+    cont.innerHTML = ''; return;
+  }
+  document.getElementById('fileList').style.display = 'block';
+  document.getElementById('uploadHint').style.display = 'none';
+  document.getElementById('fileCount').textContent = files.length;
+  var html = '';
+  for (var i = 0; i < files.length; i++) {
+    var r = results[i];
+    var badge = r && r.ok ? '<span class="badge ok">✓</span>' : (r && r.err ? '<span class="badge err">✗</span>' : '');
+    html += '<div class="file-item">' + badge +
+      '<img src="' + URL.createObjectURL(files[i]) + '" onload="URL.revokeObjectURL(this.src)">' +
+      '<div class="fn">' + (files[i].name || '图片 '+(i+1)) + '</div></div>';
+  }
+  cont.innerHTML = html;
+}
+
+function clearAll() {
+  files = []; results = []; fi.value = '';
+  renderFiles();
+  document.getElementById('resultsBox').style.display = 'none';
+  document.getElementById('progressBox').style.display = 'none';
+  document.getElementById('btnExport').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+  updateBtn();
+}
+
+function updateBtn() {
+  var topic = document.getElementById('topicInput').value.trim();
+  document.getElementById('btnGo').disabled = files.length === 0 || !topic;
+}
+
+// Batch grading
+async function startBatch() {
+  var topic = document.getElementById('topicInput').value.trim();
+  if (files.length === 0 || !topic) return;
+
+  var btn = document.getElementById('btnGo');
+  btn.disabled = true; btn.textContent = '批改中…';
+  document.getElementById('progressBox').style.display = 'block';
+  document.getElementById('resultsBox').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+
+  results = [];
+  var okCount = 0, errCount = 0;
+
+  for (var i = 0; i < files.length; i++) {
+    updateProgress(i, files.length, files[i].name);
+    try {
+      var b64 = (await readB64(files[i])).split(',')[1];
+      var text = await callAPI(b64, topic);
+      results.push({ name: files[i].name, ok: true, text: text, score: parseScore(text) });
+      okCount++;
+    } catch (e) {
+      results.push({ name: files[i].name, err: true, text: e.message, score: 0 });
+      errCount++;
+    }
+    renderFiles();
+  }
+
+  updateProgress(files.length, files.length, '完成！');
+  btn.disabled = false; btn.textContent = '重新批改';
+  showResults();
+  document.getElementById('btnExport').style.display = 'inline-block';
+
+  if (errCount > 0) {
+    document.getElementById('errorBox').textContent = errCount + ' 篇批改失败，可点击重新批改重试';
+    document.getElementById('errorBox').style.display = 'block';
+  }
+}
+
+function updateProgress(cur, total, name) {
+  document.getElementById('progressBar').style.width = Math.round(cur/total*100) + '%';
+  document.getElementById('progressText').textContent = '正在批改 ' + cur + '/' + total + '：' + (name || '');
+}
+
+function readB64(file) {
+  return new Promise(function(ok, no) {
+    var r = new FileReader();
+    r.onload = function() { ok(r.result); };
+    r.onerror = no;
+    r.readAsDataURL(file);
+  });
+}
+
+async function callAPI(imageB64, topic) {
+  var prompt = 'You are an experienced Chinese middle school (junior high) English teacher with 20 years of teaching experience. Grade this student\'s English essay.\n\n' +
+    'The essay topic is: "' + topic + '"\n\n' +
+    'Please carefully read the handwritten essay in the image. Then output your grading in the following format exactly:\n\n' +
+    '---SCORES---\n' +
+    'Total: XX/15\n' +
+    'Content: XX/5 - one sentence comment\n' +
+    'Language: XX/5 - one sentence comment (grammar, vocabulary, sentence variety)\n' +
+    'Structure: XX/3 - one sentence comment (organization, coherence, logic)\n' +
+    'Handwriting: XX/2 - one sentence comment (neatness, readability)\n\n' +
+    '---PARAGRAPH FEEDBACK---\n' +
+    '(For each paragraph in the essay, write a brief comment pointing out strengths and weaknesses. Reference specific lines or sentences.)\n' +
+    'Para 1: [comment]\n' +
+    'Para 2: [comment]\n' +
+    '(continue for all paragraphs)\n\n' +
+    '---ERROR ANNOTATIONS---\n' +
+    '(List specific errors with exact line references. Format: "Line X: \'original text\' → \'correction\' [error type: spelling/grammar/word choice]")' +
+    '\n1. ...\n2. ...\n\n' +
+    '---VOCABULARY UPGRADES---\n' +
+    '(Suggest 3-5 places where a more advanced or precise word could be used. Format: "\'original word\' → \'better word\' (reason)")\n' +
+    '1. ...\n2. ...\n\n' +
+    '---OVERALL COMMENT---\n' +
+    '(Write 100-150 words as an experienced teacher. Be encouraging but specific. Point out 1-2 key areas to improve. Use Chinese for the comment so the student understands better.)\n\n' +
+    '---REWRITTEN VERSION---\n' +
+    '(Rewrite the essay into a polished, high-scoring version at the same level. Fix all errors but keep the original ideas and voice. Use better vocabulary and sentence structures while staying appropriate for middle school level. Do NOT make it too advanced.)\n\n' +
+    'Note: This is a handwritten essay image. Please read carefully. If some words are unclear, mark them as "[unclear]" in your feedback.';
+
+  var body = JSON.stringify({
+    model: 'doubao-1-5-vision-pro-32k-250115',
+    messages: [{ role: 'user', content: [
+      { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + imageB64 } },
+      { type: 'text', text: prompt }
+    ]}],
+    max_tokens: 3000, temperature: 0.3
+  });
+
+  var resp = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: body
+  });
+
+  if (!resp.ok) {
+    var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(API_URL);
+    resp = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: body
+    });
+    if (!resp.ok) { var err = await resp.text(); throw new Error('API Error(' + resp.status + '): ' + err.slice(0, 100)); }
+  }
+
+  var data = await resp.json();
+  return data.choices[0].message.content;
+}
+
+function parseScore(text) {
+  var m = text.match(/Total:\s*(\d+)\s*\/\s*15/);
+  return m ? parseInt(m[1]) : 0;
+}
+
+function extractSection(text, section) {
+  var start = text.indexOf('---' + section + '---');
+  if (start < 0) return '';
+  var content = text.substring(start + section.length + 6);
+  var nextSec = content.search(/---[A-Z]/);
+  if (nextSec >= 0) content = content.substring(0, nextSec);
+  return content.trim();
+}
+
+function showResults() {
+  var box = document.getElementById('resultsBox');
+  box.style.display = 'block';
+
+  var okResults = results.filter(function(r) { return r.ok; });
+  var scores = okResults.map(function(r) { return r.score; }).filter(function(s) { return s > 0; });
+
+  document.getElementById('sumTotal').textContent = okResults.length + '/' + results.length;
+  document.getElementById('sumAvg').textContent = scores.length > 0 ? (scores.reduce(function(a,b){return a+b;},0)/scores.length).toFixed(1) : '-';
+  document.getElementById('sumMax').textContent = scores.length > 0 ? Math.max.apply(null, scores) : '-';
+  document.getElementById('sumMin').textContent = scores.length > 0 ? Math.min.apply(null, scores) : '-';
+
+  var cardsHtml = '';
+  for (var i = 0; i < results.length; i++) {
+    var r = results[i];
+    if (r.err) {
+      cardsHtml += '<div class="result-card" style="border-left-color:#c44"><div class="rc-header"><span class="rc-name">' + r.name + '</span><span class="rc-score" style="color:#c44">失败</span></div><div class="rc-detail"><p>' + r.text + '</p></div></div>';
+      continue;
+    }
+    var text = r.text;
+
+    // Scores grid
+    var cats = [['Content','5'],['Language','5'],['Structure','3'],['Handwriting','2']];
+    var sHtml = '';
+    for (var c = 0; c < cats.length; c++) {
+      var re = new RegExp(cats[c][0] + ':\\s*(\\d+)');
+      var m = text.match(re);
+      sHtml += '<div class="score-item"><span class="l">' + cats[c][0] + '</span><span class="v">' + (m ? m[1]+'/'+cats[c][1] : '-') + '</span></div>';
+    }
+
+    // Sections
+    var secs = [
+      ['PARAGRAPH FEEDBACK', '📝 逐段点评'],
+      ['ERROR ANNOTATIONS', '🔍 错误标注'],
+      ['VOCABULARY UPGRADES', '💎 词汇升级'],
+      ['OVERALL COMMENT', '📋 总体评价'],
+      ['REWRITTEN VERSION', '✨ 优化范文']
+    ];
+    var secHtml = '';
+    for (var s = 0; s < secs.length; s++) {
+      var content = extractSection(text, secs[s][0]);
+      if (!content) continue;
+
+      // Special rendering for rewritten version
+      if (secs[s][0] === 'REWRITTEN VERSION') {
+        secHtml += '<div class="rewrite-box"><h4>' + secs[s][1] + '</h4><p>' + content.replace(/\n/g, '<br>') + '</p></div>';
+      } else if (secs[s][0] === 'ERROR ANNOTATIONS') {
+        // Highlight error annotations
+        content = content.replace(/Line \d+/g, '<span class="annotation-badge">$&</span>');
+        content = content.replace(/→.*?(?=\n|$)/g, function(m) { return '<span style="color:#2a8a2a">' + m + '</span>'; });
+        secHtml += '<div class="section"><h4>' + secs[s][1] + '</h4><p>' + content.replace(/\n/g, '<br>') + '</p></div>';
+      } else if (secs[s][0] === 'VOCABULARY UPGRADES') {
+        content = content.replace(/→.*?(?=\n|$)/g, function(m) { return '<span class="vocab-badge">' + m + '</span>'; });
+        secHtml += '<div class="section"><h4>' + secs[s][1] + '</h4><p>' + content.replace(/\n/g, '<br>') + '</p></div>';
+      } else {
+        secHtml += '<div class="section"><h4>' + secs[s][1] + '</h4><p>' + content.replace(/\n/g, '<br>') + '</p></div>';
+      }
+    }
+
+    cardsHtml += '<div class="result-card" onclick="this.classList.toggle(\'expanded\')"><div class="rc-header"><span class="rc-name">' + (i+1) + '. ' + r.name + '</span><span class="rc-score">' + (r.score || '?') + '/15</span></div><div class="rc-detail"><div class="score-grid">' + sHtml + '</div>' + secHtml + '</div></div>';
+  }
+  document.getElementById('resultCards').innerHTML = cardsHtml;
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+function exportCSV() {
+  var topic = document.getElementById('topicInput').value.trim();
+  var csv = '序号,文件名,总分,内容,语言,结构,书写\n';
+  for (var i = 0; i < results.length; i++) {
+    var r = results[i];
+    if (!r.ok) { csv += (i+1) + ',' + r.name + ',批改失败,,,,\n'; continue; }
+    var t = r.text;
+    var vals = [];
+    ['Total','Content','Language','Structure','Handwriting'].forEach(function(k) {
+      var re = new RegExp(k + ':\\s*(\\d+)');
+      var m = t.match(re);
+      vals.push(m ? m[1] : '');
+    });
+    csv += (i+1) + ',"' + r.name + '",' + vals.join(',') + '\n';
+  }
+  var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '英语作文批改_' + topic + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
